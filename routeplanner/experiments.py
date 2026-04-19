@@ -119,4 +119,5 @@ def test_time_and_accuracy(problem_generator: IndividualProblemGenerator,
                                  "delta"], data=raw_stats)
 
 def delta(greedy_objective_function, ACO_objective_function):
-    return (ACO_objective_function - greedy_objective_function) / greedy_objective_function
+        return ((ACO_objective_function - greedy_objective_function) / 
+                (greedy_objective_function if greedy_objective_function else 1))

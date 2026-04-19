@@ -5,6 +5,9 @@ import numpy as np
 from routeplanner.typechecker import  check_number, check_collection_of_numbers
 from routeplanner.problem import UAVPathPlanningProblem
 
+def iter_num_func(coef, n_ants, n_objects):
+    return int(coef * n_ants * np.log2(n_objects) / n_ants)
+
 def greedy(problem: UAVPathPlanningProblem):
     time_start = time.perf_counter()
     time_matrix = calc_time_matrix(problem)
@@ -13,7 +16,7 @@ def greedy(problem: UAVPathPlanningProblem):
     nodes_mask = __clean_nodes_mask(problem.n_objects)
     allowed_nodes_indices = __allowed_nodes_indices(all_node_indices, nodes_mask, 0,
                                                     time_matrix, 0, problem.UAV_flight_time_limit)
-    route = None
+    route = []
     if not len(allowed_nodes_indices):
         if time_matrix[0, problem.n_objects+1] <= problem.UAV_flight_time_limit:
             route = [np.int64(0), np.int64(problem.n_objects+1)]
@@ -64,7 +67,7 @@ def ACO(problem: UAVPathPlanningProblem,
     time_matrix = calc_time_matrix(problem)
     pheromone_matrix = (np.ones((problem.n_objects+2, problem.n_objects+2), dtype=np.float64)*
                         initial_pheromone_level)
-    best_solution = None
+    best_solution = []
     best_objects_inspected = 0
         
     iter_best_objects_inspected_dynamic = [] if save_solution_dynamic else None

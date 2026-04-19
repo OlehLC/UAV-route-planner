@@ -10,17 +10,19 @@ class IndividualProblemGenerator:
                  UAV_speed_coef: numbers.Real, UAV_flight_time_limit_coef: numbers.Real,
                  random_state: numbers.Integral):
         check_number(x_mean, "x_mean", numbers.Real)
-        self.__x_mean = x_mean
         check_number(x_half_interval, "x_half_interval", numbers.Real, sign_check="non_neg")
+        self.__x_mean = x_mean        
         self.__x_half_interval = x_half_interval
         check_number(y_mean, "y_mean", numbers.Real)
-        self.__y_mean = y_mean
         check_number(y_half_interval, "y_half_interval", numbers.Real, sign_check="non_neg")
+        self.__y_mean = y_mean        
         self.__y_half_interval = y_half_interval
 
         check_number(wind_speed_mean, "wind_speed_mean", numbers.Real, sign_check="non_neg")
-        self.__wind_speed_mean = wind_speed_mean
         check_number(wind_speed_half_interval, "wind_speed_half_interval", numbers.Real, sign_check="non_neg")
+        if wind_speed_mean < wind_speed_half_interval:
+            raise ValueError("wind_speed_mean cannot be less than wind_speed_half_interval")
+        self.__wind_speed_mean = wind_speed_mean        
         self.__wind_speed_half_interval = wind_speed_half_interval
 
         check_number(UAV_speed_coef, "UAV_speed_coef", numbers.Real, sign_check="pos")
@@ -88,6 +90,14 @@ class UAVPathPlanningProblem:
         check_collection_of_numbers(self.wind_vector, "wind_vector", tuple, numbers.Real)
         if len(self.wind_vector) != 2:
             raise ValueError("wind_vector must have equally 2 values")
+    def to_dict(self):
+        return {
+            "x_coords": self.x_coords,
+            "y_coords": self.y_coords,
+            "UAV_speed": self.UAV_speed,
+            "UAV_flight_time_limit": self.UAV_flight_time_limit,
+            "wind_vector": self.wind_vector
+        }
     
     @property
     def n_objects(self):
