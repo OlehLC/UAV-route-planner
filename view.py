@@ -51,6 +51,7 @@ class AppView:
         notebook.add(self.termination_condition_test_tab, text="Визначення умови завершення роботи ACO")
         notebook.add(self.specific_parameter_test_tab, text="Визначення параметру α ACO")
         notebook.add(self.time_and_accuracy_test_tab, text="Порівняння алгоритмів за часом та точністю")
+        notebook.pack(fill="both", expand=True)
 
         style = ttk.Style()
         self.font_size = 12
@@ -67,12 +68,19 @@ class AppView:
 
     def build_ind_prob_work_tab(self):
         frame = self.ind_prob_work_tab
+        frame.columnconfigure(0, weight=1)
+        frame.columnconfigure(1, weight=2)
+        frame.columnconfigure(2, weight=1)
+        frame.rowconfigure(0, weight=1)
+
         settings_frame = ttk.Frame(frame, style="My.TFrame")
-        settings_frame.grid(row=0, column=0, sticky="n")
+        settings_frame.grid(row=0, column=0, sticky="nsw")
         graph_frame = ttk.Frame(frame)
         graph_frame.grid(row=0, column=1)
         log_frame = ttk.Frame(frame)
-        log_frame.grid(row=0, column=2, sticky="n")
+        log_frame.rowconfigure(1, weight=1)
+        log_frame.columnconfigure(0, weight=1)
+        log_frame.grid(row=0, column=2, sticky="nse")
 
         input_check_frame = ttk.Frame(settings_frame)
         input_check_frame.grid(row=0, column=0, padx=20, pady=10, sticky="w")
@@ -92,16 +100,10 @@ class AppView:
         self.prob_input_frame.columnconfigure(1, weight=1)
         ttk.Label(self.prob_input_frame, text="Вхідні дані ІЗ за мат. моделлю",
                   font=(self.font, self.font_size, "bold")).grid(row=0, column=0, columnspan=2, sticky="w")
-        self.problem_data_entries = {}
-        self.problem_data_vars = {}
-        for i, p_sys, p_ui in zip(range(len(self.__PROBLEM_DATA_SYS_NAMES)), 
-                                  self.__PROBLEM_DATA_SYS_NAMES, self.__PROBLEM_DATA_UI_NAMES):
-            ttk.Label(self.prob_input_frame, text=p_ui).grid(row=i+1, column=0, sticky="e")
-            var = tk.StringVar()
-            e = ttk.Entry(self.prob_input_frame, textvariable=var)
-            e.grid(row=i+1, column=1, padx=10, sticky="e")
-            self.problem_data_entries[p_sys] = e
-            self.problem_data_vars[p_sys] = var
+
+        self.problem_data_vars, _ = self.__create_params_table_input(self.prob_input_frame, 
+                                                                     self.__PROBLEM_DATA_SYS_NAMES, self.__PROBLEM_DATA_UI_NAMES, 
+                                                                     row_start=1, entry_width=40)
 
         self.save_file_btn = ttk.Button(input_check_frame, text="Зберегти", command=self.__save_to_dir)
         self.save_file_btn.grid(row=5, column=0)
@@ -112,16 +114,10 @@ class AppView:
         self.prob_gen_params_frame.columnconfigure(1, weight=1)
         ttk.Label(self.prob_gen_params_frame, text="Параметри генератора ІЗ         ",
                   font=(self.font, self.font_size, "bold")).grid(row=0, column=0, columnspan=2, sticky="w")
-        self.problem_gen_params_entries = {}
-        self.problem_gen_params_vars = {}
-        for i, p_sys, p_ui in zip(range(len(self.__PROBLEM_GEN_PARAMS_SYS_NAMES)), 
-                               self.__PROBLEM_GEN_PARAMS_SYS_NAMES, self.__PROBLEM_GEN_PARAMS_UI_NAMES):
-            ttk.Label(self.prob_gen_params_frame, text=p_ui).grid(row=i+1, column=0, sticky="e")
-            var = tk.StringVar()
-            e = ttk.Entry(self.prob_gen_params_frame, textvariable=var)
-            e.grid(row=i+1, column=1, padx=10, sticky="e")
-            self.problem_gen_params_entries[p_sys] = e
-            self.problem_gen_params_vars[p_sys] = var
+
+        self.problem_gen_params_vars, _ = self.__create_params_table_input(self.prob_gen_params_frame, 
+                                                                           self.__PROBLEM_GEN_PARAMS_SYS_NAMES, self.__PROBLEM_GEN_PARAMS_UI_NAMES, 
+                                                                           row_start=1)
 
         self.gen_prob_btn = ttk.Button(input_check_frame, text="Згенерувати", command=self.__generate_problem)
         
@@ -151,16 +147,10 @@ class AppView:
         self.ACO_params_frame.columnconfigure(1, weight=1)
         ttk.Label(self.ACO_params_frame, text="Параметри алгоритму ACO",
                   font=(self.font, self.font_size, "bold")).grid(row=0, column=0, columnspan=2, sticky="w")      
-        self.ACO_params_entries = {}
-        self.ACO_params_vars = {}
-        for i, p_sys, p_ui in zip(range(len(self.__ACO_PARAMS_SYS_NAMES)), 
-                               self.__ACO_PARAMS_SYS_NAMES, self.__ACO_PARAMS_UI_NAMES):
-            ttk.Label(self.ACO_params_frame, text=p_ui).grid(row=i+1, column=0, sticky="e")
-            var = tk.StringVar()
-            e = ttk.Entry(self.ACO_params_frame, textvariable=var)
-            e.grid(row=i+1, column=1, padx=10, sticky="e")
-            self.ACO_params_entries[p_sys] = e
-            self.ACO_params_vars[p_sys] = var
+       
+        self.ACO_params_vars, _ = self.__create_params_table_input(self.ACO_params_frame, 
+                                                                   self.__ACO_PARAMS_SYS_NAMES, self.__ACO_PARAMS_UI_NAMES, 
+                                                                   row_start=1)
         ttk.Label(self.ACO_params_frame, text=f"* {self.__ITER_NUM_FUNC_REPRES}").grid(row=len(self.__ACO_PARAMS_SYS_NAMES)+1, column=0, columnspan=2, sticky="w")
 
         ttk.Button(settings_frame, text="Розв'язати", command=self.__run_individual_problem_solving).grid(row=5, column=0)
@@ -173,7 +163,7 @@ class AppView:
         self.fig_sol.tight_layout()
         self.canvas_sol.get_tk_widget().grid(row=0, column=0)
 
-        self.fig_dynamic, self.ax_dynamic = plt.subplots(figsize=(8,3))
+        self.fig_dynamic, self.ax_dynamic = plt.subplots(figsize=(8,4))
         self.canvas_dynamic = FigureCanvasTkAgg(self.fig_dynamic, master=graph_frame)
         self.ax_dynamic.set_title("Динаміка зміни рекордного розв'язку")
         self.ax_dynamic.set_xlabel("№ ітерації")
@@ -182,17 +172,24 @@ class AppView:
 
         ttk.Label(log_frame, text="Результати роботи алгоритму", 
                   font=(self.font, self.font_size, "bold")).grid(row=0, column=0, sticky="w")
-        self.solving_log = ScrolledText(log_frame, width=55, height=30)
-        self.solving_log.grid(row=1, column=0)
+        self.solving_log = ScrolledText(log_frame, width=55)
+        self.solving_log.grid(row=1, column=0, sticky="nsw")
 
     def build_termination_condition_test_tab(self):
         frame = self.termination_condition_test_tab
+        frame.columnconfigure(0, weight=1)
+        frame.columnconfigure(1, weight=2)
+        frame.columnconfigure(2, weight=1)
+        frame.rowconfigure(0, weight=1)
+
         settings_frame = ttk.Frame(frame, style="My.TFrame")
-        settings_frame.grid(row=0, column=0, sticky="n")
+        settings_frame.grid(row=0, column=0, sticky="nsw")
         graph_frame = ttk.Frame(frame)
         graph_frame.grid(row=0, column=1)
         log_frame = ttk.Frame(frame)
-        log_frame.grid(row=0, column=2, sticky="n")
+        log_frame.rowconfigure(1, weight=1)
+        log_frame.columnconfigure(0, weight=1)
+        log_frame.grid(row=0, column=2, sticky="nse")
 
         # random_state
         random_state_frame = ttk.Frame(settings_frame)
@@ -265,16 +262,23 @@ class AppView:
         ttk.Label(log_frame, text="Статистика експерименту", 
                   font=(self.font, self.font_size, "bold")).grid(row=0, column=0, sticky="w")
         self.termination_condition_test_log = ScrolledText(log_frame, width=55, height=30)
-        self.termination_condition_test_log.grid(row=1, column=0, sticky="e")
+        self.termination_condition_test_log.grid(row=1, column=0, sticky="nsw")
 
     def build_specific_parameter_test_tab(self):
         frame = self.specific_parameter_test_tab
+        frame.columnconfigure(0, weight=1)
+        frame.columnconfigure(1, weight=2)
+        frame.columnconfigure(2, weight=1)
+        frame.rowconfigure(0, weight=1)
+
         settings_frame = ttk.Frame(frame, style="My.TFrame")
-        settings_frame.grid(row=0, column=0, sticky="n")
+        settings_frame.grid(row=0, column=0, sticky="nsw")
         graph_frame = ttk.Frame(frame)
         graph_frame.grid(row=0, column=1)
         log_frame = ttk.Frame(frame)
-        log_frame.grid(row=0, column=2, sticky="n")
+        log_frame.rowconfigure(1, weight=1)
+        log_frame.columnconfigure(0, weight=1)
+        log_frame.grid(row=0, column=2, sticky="nse")
 
         # random_state
         random_state_frame = ttk.Frame(settings_frame)
@@ -345,16 +349,24 @@ class AppView:
         ttk.Label(log_frame, text="Статистика експерименту", 
                   font=(self.font, self.font_size, "bold")).grid(row=0, column=0, sticky="w")
         self.specific_parameter_test_log = ScrolledText(log_frame, width=55, height=30)
-        self.specific_parameter_test_log.grid(row=1, column=0, sticky="e")
+        self.specific_parameter_test_log.grid(row=1, column=0, sticky="nsw")
 
     def build_time_and_accuracy_test_tab(self):
         frame = self.time_and_accuracy_test_tab
+        frame.columnconfigure(0, weight=1)
+        frame.columnconfigure(1, weight=2)
+        frame.columnconfigure(2, weight=1)
+        frame.rowconfigure(0, weight=1)
+
         settings_frame = ttk.Frame(frame, style="My.TFrame")
-        settings_frame.grid(row=0, column=0, sticky="n")
+        settings_frame.grid(row=0, column=0, sticky="nsw")
         graph_frame = ttk.Frame(frame)
         graph_frame.grid(row=0, column=1)
         log_frame = ttk.Frame(frame)
-        log_frame.grid(row=0, column=2, sticky="n")
+        log_frame.rowconfigure(1, weight=1)
+        log_frame.rowconfigure(3, weight=1)
+        log_frame.columnconfigure(0, weight=1)
+        log_frame.grid(row=0, column=2, sticky="nse")
 
         # random_state
         random_state_frame = ttk.Frame(settings_frame)
@@ -394,7 +406,7 @@ class AppView:
         self.time_and_accuracy_test_ACO_params_frame = ttk.Frame(settings_frame, style="My.TFrame", borderwidth=1)
         self.time_and_accuracy_test_ACO_params_frame.columnconfigure(0, weight=1)
         self.time_and_accuracy_test_ACO_params_frame.columnconfigure(1, weight=1)
-        self.time_and_accuracy_test_ACO_params_frame.grid(row=3, column=0, padx=20, pady=10, sticky="w")
+        self.time_and_accuracy_test_ACO_params_frame.grid(row=3, column=0, padx=20, pady=10, sticky="we")
         ttk.Label(self.time_and_accuracy_test_ACO_params_frame, text="Параметри алгоритму ACO",
                   font=(self.font, self.font_size, "bold")).grid(row=0, column=0, columnspan=2, sticky="w")        
         ACO_fixed_vars, last_row = self.__create_params_table_input(self.time_and_accuracy_test_ACO_params_frame, 
@@ -425,12 +437,12 @@ class AppView:
         ttk.Label(log_frame, text="Статистика за точністю", 
                   font=(self.font, self.font_size, "bold")).grid(row=0, column=0, sticky="w")
         self.accuracy_test_log = ScrolledText(log_frame, width=80, height=25)
-        self.accuracy_test_log.grid(row=1, column=0, sticky="e")
+        self.accuracy_test_log.grid(row=1, column=0, sticky="nsw")
 
         ttk.Label(log_frame, text="Статистика за часом", 
                   font=(self.font, self.font_size, "bold")).grid(row=2, column=0, sticky="w")
         self.time_test_log = ScrolledText(log_frame, width=80, height=25)
-        self.time_test_log.grid(row=3, column=0, sticky="e")
+        self.time_test_log.grid(row=3, column=0, sticky="nsw")
 
 
     def __run_individual_problem_solving(self):
@@ -566,16 +578,31 @@ class AppView:
 
 
     def __visualize_route(self, problem_data: dict, solution):
+        point_size = 150
+        point_border_width = 1
         n_objects = len(problem_data["x_coords"]) - 2
-        self.ax_sol.clear()        
-        self.ax_sol.scatter(problem_data["x_coords"][1:n_objects+1], problem_data["y_coords"][1:n_objects+1], c="blue")
-        self.ax_sol.scatter(problem_data["x_coords"][[0, n_objects+1]], problem_data["y_coords"][[0, n_objects+1]], 
-                            marker="s", s=50, c="orange", label="Пункти зльоту-посадки")
-        label_y_shift = 2*(problem_data["x_coords"].max() - problem_data["x_coords"].min()) / 100
-        for i, x, y in zip(range(n_objects+2), problem_data["x_coords"], problem_data["y_coords"]):
-            self.ax_sol.text(x, y-label_y_shift, str(i))
 
-        self.ax_sol.plot(problem_data["x_coords"][solution.route], problem_data["y_coords"][solution.route], c="green")
+        self.ax_sol.clear() 
+        self.ax_sol.scatter(problem_data["x_coords"][1:n_objects+1], problem_data["y_coords"][1:n_objects+1], 
+                            facecolors='skyblue', edgecolors='blue', s=point_size, linewidths=point_border_width, zorder=2)
+        self.ax_sol.scatter(problem_data["x_coords"][[0, n_objects+1]], problem_data["y_coords"][[0, n_objects+1]], 
+                            facecolors='orange', edgecolors='red', marker="s", linewidths=point_border_width, s=point_size, 
+                            zorder=2, label="Пункти зльоту-посадки")
+        for i, x, y in zip(range(n_objects+2), problem_data["x_coords"], problem_data["y_coords"]):
+            self.ax_sol.text(x, y, str(i), ha='center', va='center')
+
+        self.ax_sol.plot(problem_data["x_coords"][solution.route], problem_data["y_coords"][solution.route], c="green", zorder=1)
+
+        wind_vec_start_x, wind_vec_start_y = problem_data["x_coords"].min(), problem_data["y_coords"].min()
+        wind_vec_x, wind_vec_y = problem_data["wind_vector"]
+        self.ax_sol.arrow(
+            wind_vec_start_x, wind_vec_start_y,
+            wind_vec_x, wind_vec_y,
+            head_width=1, head_length=1, length_includes_head=True,
+            color='blue'
+        )
+        self.ax_sol.text(wind_vec_start_x + wind_vec_x, wind_vec_start_y + wind_vec_y, "w", color='blue')
+
         self.ax_sol.set_title("Розв'язання ІЗ")
         self.ax_sol.set_xlabel("X")
         self.ax_sol.set_ylabel("Y")
@@ -599,7 +626,7 @@ class AppView:
         self.canvas_dynamic.draw()
 
     def __log_result(self, problem_data, solution, alg_name):
-        self.solving_log.insert("end", f"""================= Звіт {alg_name} =================
+        self.solving_log.insert("end", f"""====================== Звіт {alg_name} ======================
 розмірність задачі: {len(problem_data["x_coords"])-2} об'єктів
 час роботи: {solution.solving_time_sec:.6f} с
 знайдений маршрут: {", ".join(map(str, solution.route))}
@@ -615,8 +642,10 @@ class AppView:
             data=exp_data,
             x="problem_size",
             y="objective_function",
-            hue="iter_num_func_coef",
-            errorbar="ci",
+            hue="iter_num_func_coef",         
+            errorbar="sd",
+            err_style="bars",
+            err_kws={"capsize": 7},
             ax=self.ax_termination_condition_test_o_f
         )
         ax.legend(title=self.__ACO_PARAMS_UI_NAMES[5])
@@ -651,7 +680,9 @@ class AppView:
             x="problem_size",
             y="objective_function",
             hue="alpha",
-            errorbar="ci",
+            errorbar="sd",
+            err_style="bars",
+            err_kws={"capsize": 7},
             ax=self.ax_specific_parameter_test_o_f
         )
         ax.legend(title=self.__ACO_PARAMS_UI_NAMES[0])
@@ -684,7 +715,9 @@ class AppView:
             x="problem_size",
             y="greedy_objective_function",
             label="ЖА",
-            errorbar="ci",
+            errorbar="sd",
+            err_style="bars",
+            err_kws={"capsize": 7},
             ax=self.ax_accuracy
         )
         ax_acc = sns.lineplot(
@@ -692,7 +725,9 @@ class AppView:
             x="problem_size",
             y="ACO_objective_function",
             label="ACO",
-            errorbar="ci",
+            errorbar="sd",
+            err_style="bars",
+            err_kws={"capsize": 7},
             ax=self.ax_accuracy
         )
         ax_acc = sns.lineplot(
@@ -700,7 +735,9 @@ class AppView:
             x="problem_size",
             y="delta",
             label="δ",
-            errorbar="ci",
+            errorbar="sd",
+            err_style="bars",
+            err_kws={"capsize": 7},
             ax=self.ax_accuracy
         )
         self.ax_accuracy.set_title(f"Точність алгоритмів для різних {self.__PROBLEM_GEN_PARAMS_UI_NAMES[8]}")
@@ -715,7 +752,9 @@ class AppView:
             x="problem_size",
             y="greedy_solving_time_sec",
             label="ЖА",
-            errorbar="ci",
+            errorbar="sd",
+            err_style="bars",
+            err_kws={"capsize": 7},
             ax=self.ax_time
         )
         ax_time = sns.lineplot(
@@ -723,7 +762,9 @@ class AppView:
             x="problem_size",
             y="ACO_solving_time_sec",
             label="ACO",
-            errorbar="ci",
+            errorbar="sd",
+            err_style="bars",
+            err_kws={"capsize": 7},
             ax=self.ax_time
         )
         self.ax_time.set_title(f"Час роботи алгоритмів для різних {self.__PROBLEM_GEN_PARAMS_UI_NAMES[8]}")
@@ -796,13 +837,13 @@ class AppView:
             }
         }       
 
-    def __create_params_table_input(self, parent, params_sys_names, params_ui_names, row_start=0):
+    def __create_params_table_input(self, parent, params_sys_names, params_ui_names, row_start=0, entry_width=20):
         vars = {}
         for i, p_sys, p_ui in zip(range(len(params_sys_names)), 
                                   params_sys_names, params_ui_names):
             ttk.Label(parent, text=p_ui).grid(row=i+row_start, column=0, sticky="e")
             var = tk.StringVar()
-            e = ttk.Entry(parent, textvariable=var)
+            e = ttk.Entry(parent, textvariable=var, width=entry_width)
             e.grid(row=i+row_start, column=1, padx=10, sticky="e")
             vars[p_sys] = var
         last_row = row_start + len(params_sys_names)-1
