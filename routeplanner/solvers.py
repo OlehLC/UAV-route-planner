@@ -6,7 +6,7 @@ from routeplanner.typechecker import  check_number, check_collection_of_numbers
 from routeplanner.problem import UAVPathPlanningProblem
 
 def iter_num_func(coef, n_ants, n_objects):
-    return int(coef * n_ants * np.log2(n_objects) / n_ants)
+    return int(coef * n_objects * np.log2(n_objects) / n_ants)
 
 def greedy(problem: UAVPathPlanningProblem):
     time_start = time.perf_counter()
@@ -89,6 +89,7 @@ def ACO(problem: UAVPathPlanningProblem,
         )
     
     iters_unchanged = 0
+    reset_iter_counter = False
     while iters_unchanged < n_iters_without_improvement:
         iter_best_objects_inspected = 0        
         pheromone_increment_matrix = np.zeros((problem.n_objects+2, problem.n_objects+2))
@@ -114,12 +115,41 @@ def ACO(problem: UAVPathPlanningProblem,
                                                                     time_matrix, ant_route_time, problem.UAV_flight_time_limit)
             ant_route.append(np.int64(problem.n_objects+1))
             ant_route_objects_count = len(ant_route)-2
+
+            # Local optimization: 2-swap
+            if ant_route_objects_count >= 2:
+                ant_route_swap_pos_1 = rng.integers(1, ant_route_objects_count)
+                ant_route_swap_pos_2 = ant_route_swap_pos_1 + 1
+                ant_route_time_optimized = (ant_route_time - (time_matrix[ant_route[ant_route_swap_pos_1-1], ant_route[ant_route_swap_pos_1]] + 
+                                                              time_matrix[ant_route[ant_route_swap_pos_1], ant_route[ant_route_swap_pos_2]] + 
+                                                              time_matrix[ant_route[ant_route_swap_pos_2], ant_route[ant_route_swap_pos_2+1]])
+                                                           + (time_matrix[ant_route[ant_route_swap_pos_1-1], ant_route[ant_route_swap_pos_2]] + 
+                                                              time_matrix[ant_route[ant_route_swap_pos_2], ant_route[ant_route_swap_pos_1]] + 
+                                                              time_matrix[ant_route[ant_route_swap_pos_1], ant_route[ant_route_swap_pos_2+1]]))
+                if ant_route_time_optimized < ant_route_time:
+                    ant_route[ant_route_swap_pos_1], ant_route[ant_route_swap_pos_2] = ant_route[ant_route_swap_pos_2], ant_route[ant_route_swap_pos_1]
+                    ant_route_time = ant_route_time_optimized
+
+            # Trying to add the node
+            if ant_route_objects_count < problem.n_objects:
+                ant_route_add_pos_1 = rng.integers(0, len(ant_route) - 1)
+                # node_ind_add = np.argmin(time_matrix[ant_route[ant_route_add_pos_1], ~ant_visited_nodes_mask])
+                available_indices = np.where(~ant_visited_nodes_mask)[0]
+                node_ind_add = available_indices[np.argmin(time_matrix[ant_route[ant_route_add_pos_1], available_indices] + 
+                                                           time_matrix[available_indices, ant_route[ant_route_add_pos_1+1]])]
+
+                ant_route_time_added = (ant_route_time - time_matrix[ant_route[ant_route_add_pos_1], ant_route[ant_route_add_pos_1+1]] + 
+                                        time_matrix[ant_route[ant_route_add_pos_1], node_ind_add] + time_matrix[node_ind_add, ant_route[ant_route_add_pos_1+1]])
+                if ant_route_time_added <= problem.UAV_flight_time_limit:
+                    ant_route.insert(ant_route_add_pos_1+1, node_ind_add)
+                    ant_route_objects_count += 1
+                    ant_route_time = ant_route_time_added
             
-            iters_unchanged += 1
             if ant_route_objects_count > best_objects_inspected:
                 best_objects_inspected = ant_route_objects_count
                 best_solution = ant_route
-                iters_unchanged = 0
+                reset_iter_counter = True
+                # iters_unchanged = 0
             
             if save_solution_dynamic and ant_route_objects_count > iter_best_objects_inspected:
                 iter_best_objects_inspected = ant_route_objects_count
@@ -130,6 +160,11 @@ def ACO(problem: UAVPathPlanningProblem,
 
         pheromone_matrix = (1 - ro) * pheromone_matrix + pheromone_increment_matrix
 
+        iters_unchanged += 1
+        if reset_iter_counter:
+            iters_unchanged = 0
+            reset_iter_counter = False
+            
         if save_solution_dynamic:
             iter_best_objects_inspected_dynamic.append(iter_best_objects_inspected)
             record_best_objects_inspected_dynamic.append(best_objects_inspected)
