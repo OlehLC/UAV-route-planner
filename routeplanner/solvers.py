@@ -61,12 +61,12 @@ def ACO(problem: UAVPathPlanningProblem,
     check_number(random_state, "random_state", numbers.Integral)
 
     rng = np.random.default_rng(random_state)
+    MAX_NUM = np.float64(np.finfo(np.float32).max)
 
     time_start = time.perf_counter()
     all_node_indices = np.arange(problem.n_objects+2)
     time_matrix = calc_time_matrix(problem)
-    pheromone_matrix = (np.ones((problem.n_objects+2, problem.n_objects+2), dtype=np.float64)*
-                        initial_pheromone_level)
+    pheromone_matrix = np.ones((problem.n_objects+2, problem.n_objects+2), dtype=np.float64) * initial_pheromone_level
     best_solution = []
     best_objects_inspected = 0
         
@@ -88,11 +88,14 @@ def ACO(problem: UAVPathPlanningProblem,
             record_best_objects_inspected_dynamic=record_best_objects_inspected_dynamic
         )
     
+    time_heuristic = time_matrix**(-beta)
     iters_unchanged = 0
     reset_iter_counter = False
     while iters_unchanged < n_iters_without_improvement:
         iter_best_objects_inspected = 0        
         pheromone_increment_matrix = np.zeros((problem.n_objects+2, problem.n_objects+2))
+        # Formulae 2.3 in report
+        aco_heuristic = (pheromone_matrix**alpha) * time_heuristic
 
         for k in range(n_ants_in_pop):
             ant_route_time = 0
@@ -101,12 +104,11 @@ def ACO(problem: UAVPathPlanningProblem,
             ant_allowed_nodes_indices = __allowed_nodes_indices(all_node_indices, ant_visited_nodes_mask, ant_route[-1], 
                                                                 time_matrix, ant_route_time, problem.UAV_flight_time_limit)
             while len(ant_allowed_nodes_indices):
-                # Formulae 2.3 in report
-                objects_prob_coefs = (np.pow(pheromone_matrix[ant_route[-1], ant_allowed_nodes_indices], alpha)*
-                                      np.pow(time_matrix[ant_route[-1], ant_allowed_nodes_indices], -beta))
-                objects_probs = objects_prob_coefs / objects_prob_coefs.sum()
-                # print("objects_probs", objects_probs)
-                next_object = rng.choice(a=ant_allowed_nodes_indices, p=objects_probs)
+                objects_prob_coefs = aco_heuristic[ant_route[-1], ant_allowed_nodes_indices]
+                np.clip(objects_prob_coefs, None, MAX_NUM, out=objects_prob_coefs)
+                cumsum = np.cumsum(objects_prob_coefs)
+                r = rng.random() * cumsum[-1]
+                next_object = ant_allowed_nodes_indices[np.searchsorted(cumsum, r)]
 
                 ant_route_time += time_matrix[ant_route[-1], next_object]
                 ant_route.append(next_object)
@@ -182,7 +184,7 @@ def __allowed_nodes_indices(all_node_indices, visited_nodes_mask, current_node_i
     # See 2.2 in report
     unvisited_objects_ind = all_node_indices[~visited_nodes_mask]
     time_from_current_to_unvisited_node = time_matrix[current_node_index, unvisited_objects_ind]
-    time_from_unvisited_to_landing_node = time_matrix[unvisited_objects_ind, len(all_node_indices)-1].ravel()
+    time_from_unvisited_to_landing_node = time_matrix[unvisited_objects_ind, -1]
     flight_times = current_flight_time+time_from_current_to_unvisited_node+time_from_unvisited_to_landing_node
     return unvisited_objects_ind[flight_times <= flight_time_limit]
 
